@@ -1,0 +1,26 @@
+# a shell script to build the complete Tunix
+
+cd fm/source
+make -f Makefile all
+
+cd ../../mm/source
+make -f Makefile all
+
+cd ../../pm/source
+make -f Makefile all
+
+cd ../../ipcm/source
+make -f Makefile all
+
+cd ../../driver/source
+make -f Makefile all
+
+cd ../../hardware/source
+make -f Makefile all
+
+cd ../../kernel/source
+make -f Makefile all
+
+cd ../../result
+mkfs fs0
+

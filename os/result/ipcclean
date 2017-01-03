@@ -1,0 +1,6 @@
+# remove some ipc queues
+
+for i in $*
+do
+	ipcrm -q$i
+done

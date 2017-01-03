@@ -1,0 +1,32 @@
+# start all os processes
+
+kopt=
+hdopt='-m0'
+swopt='-m1'
+fmopt=
+mmopt=
+imopt=
+pmopt='-v'
+
+for i in $*
+do
+	case $i in
+	k)	kopt='-d' ;;
+	h)	hdopt='-m0 -d' ;;
+	s)  swopt='-m1 -d' ;;
+	f)  fmopt='-d' ;;
+	m)	mmopt='-d' ;;
+	i)  imopt='-d' ;;
+	p)  pmopt='-v -d' ;;
+	esac
+done
+
+kernel $kopt&
+sleep 2
+devhd $hdopt&
+devsw $swopt&
+fm    $fmopt&
+mm    $mmopt&
+ipcm  $imopt&
+pm    $pmopt&
+

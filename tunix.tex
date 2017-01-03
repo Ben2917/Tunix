@@ -1,0 +1,293 @@
+\documentstyle[12pt]{article}
+
+\pagestyle{empty}
+\parindent0mm   
+\topmargin0cm
+\textwidth16cm \textheight23cm \oddsidemargin0mm
+\newcommand{\aaa}{\vspace{2.5ex plus0.3ex minus0.3ex}}
+%-----------------------------------------------------------------------------
+\begin{document}
+
+\begin{center}
+{\huge Notes on Tunix}
+\end{center}
+
+This is not the technical documentation for the
+software Tunix. The documentation is to be found
+in the book
+\begin{quote}
+R. M. Switzer, {\it Operating Systems: A Practical
+Approach}, Prentice Hall, 1993
+\end{quote}
+This paper is merely a set of notes on the installation
+and use of Tunix.
+
+\section{Platform}
+\noindent
+
+Tunix, as delivered, is executable on an Intel processor
+80386 or 80486 under Unix System V, Release 3 and
+upwards.
+
+
+The part that makes porting to other
+architectures non-trivial is the very short but
+somewhat tricky assembly module {\tt context.s}.
+This module is responsible for manipulating the
+stack to make a context switch between threads
+possible. In order to port Tunix to other architectures
+you will need to rewrite this assembler module. That
+means, of course, that you will need to understand
+the stack conventions of your local C compiler and you
+will need to be conversant with writing assembler
+code on your machine.
+
+
+Under SunOS it is conceivable these manipulations in
+assembler could be avoided entirely by using the
+threads provided to programmers by the operating
+system. If you want to try something like this,
+take a look at the C module {\tt thread.c}, which
+implements the Tunix threads.
+
+
+\section{Installing Tunix}
+\noindent
+
+You have presumably already unpacked the tar-file
+{\tt tunix.tar} for otherwise you would not be reading
+this text. In the same directory in which you found
+this text you will find a subdirectory {\tt os} and there
+you will find a shell script  called
+{\tt build\_os}. In principle all you have to do is
+enter the command
+\begin{verbatim}
+    build_os
+\end{verbatim}
+The script will automatically build all the parts
+of Tunix and deposit the executable binaries in
+the subdirectory {\tt os/result}. However, you
+would be well advised to watch for error messages
+that might occur while the script is working --
+or perhaps, better still, redirect the output to
+a file to be inspected when the script is finished.
+
+\section{Populating the file system}
+\noindent
+
+The shell script {\tt build\_os} created a
+file system for Tunix using the Tunix utility {\tt mkfs}
+which can be found in the subdirectory {\tt os/result}.
+This file system is empty. The first thing you will
+want to do is populate it with some directories and
+files. This is simultaneously a first exercise in
+using Tunix.
+
+
+Move to the subdirectory {\tt os/result} and start
+the Tunix system by executing the shell script
+{\tt startup}. The driver process {\tt devtty}
+for terminals must be started separately. This
+is best done in a separate window (workstations)
+or on a separate virtual terminal (Unix System V)
+so as to keep the input and output of various
+Tunix processes from getting mixed. Switch to
+a different window and in the the subdirectory
+{\tt os/result} enter the command
+\begin{verbatim}
+devtty -m2
+\end{verbatim}
+
+
+Now all parts of the Tunix OS are running. When
+you switch back to the window in which the
+kernel was started, you should see the first
+few lines of the process table as reported
+by the process manager PM in verbose mode.
+You will see that only one process exists
+with PID 5. This is essentially the {\tt init}
+process but it can be used for doing
+administrative work, as we will now see.
+
+
+Switch to a new window or virtual terminal
+and in the subdirectory {\tt os/result}
+enter the command
+\begin{verbatim}
+user 5
+\end{verbatim}
+This starts a `user process' which regards
+itself as having PID 5. It can now communicate
+with the kernel. You can use these `user processes'
+much as you would the shell, entering commands
+like {\tt ls} and {\tt cd ...}. In addition
+the user processes accept a number of commands
+ordinary shells don't understand as we will see.
+If you want to know which commands the user
+process understands, enter the command {\tt help}
+or else examine the code of {\tt user.c} in
+the subdirectory {\tt os/kernel/source}.
+
+When the prompt {\tt >} of the user process appears
+you can enter the command {\tt ls}. The answer
+will be `nothing', since your file system is
+still empty. Now enter the following commands
+to get things started.
+\begin{verbatim}
+mkdir bin
+mkdir dev
+mkdir etc
+cd dev
+mknod fs    060600 0
+mknod fs1   060600 1
+mknod rroot 020600 0
+mknod tty   020622 512
+\end{verbatim}
+If you now enter the command {\tt ls} you should
+get an answer that looks like this:
+\begin{verbatim}
+brw-------  1   1   1    0,  0 Mar 3 93 10:09  fs
+brw-------  1   1   1    0,  1 Mar 3 93 10:10  fs1
+crw-------  1   1   1    0,  0 Mar 3 93 10:10  rroot
+crw--w--w-  1   1   1    2,  0 Mar 3 93 10:10  tty
+\end{verbatim}
+Now enter the command {\tt sync} to be sure your
+changes are recorded permanently in the file system.
+
+
+In principle you could fill your file system with
+directories and files `by hand'. That is very
+tedious. A quicker way is to use the Tunix
+utility {\tt tree}. This program accepts a
+Unix path as argument and makes an exact copy of
+the Unix subdirectory specified by this path
+in your Tunix root file system beneath the
+subdirectory {\tt etc}. To do this the
+Tunix kernel should be running of course.
+
+\aaa
+{\bf Example}\\
+Suppose you have a Unix directory {\tt hooha}
+which contains several subdirectories and each
+of these contains several files. Start the
+system with {\tt startup} and {\tt devtty -m2}.
+Instead of starting the usual user process
+with {\tt user} enter the command
+\begin{verbatim}
+tree hooha
+\end{verbatim}
+When {\tt tree} is finished, stop the kernel
+again with {\tt shutdown}. Later with
+your `user process' you can change
+to the directory {\tt etc}. You will find
+that it now has a subdirectory {\tt hooha}
+and that {\tt hooha} has the same tree structure
+as the original Unix directory. If some of
+the files in this directory are ASCII files
+you can list their contents with the command {\tt cat}.
+
+\section{User processes}
+\noindent
+
+You can now test Tunix in `multiuser mode'. You start Tunix
+in the manner described above. Execute the shell script
+{\tt startup} in one window and enter the command
+\begin{verbatim}
+devtty -m2
+\end{verbatim}
+in a second window. In a third window enter the
+command
+\begin{verbatim}
+user 5
+\end{verbatim}
+to start your {\tt init} process. This one should run
+as long as the kernel is running. You may now generate
+further processes by entering the command {\tt fork}
+after the prompt in any `user process'. If you then
+examine the process table printed by PM, you will
+see that a new process has been created and you will
+also see which PID it has been given. In a new window
+(to keep output from being mixed) enter the
+command
+\begin{verbatim}
+user n
+\end{verbatim}
+where {\tt n} is the PID of the newly created process.
+
+
+You can tell which process is currently running --
+i.e.\ `has the CPU' -- either by looking at the process
+table or by seeing which user process has its prompt
+visible. The running process has an {\tt O} in the
+{\tt status} column of the process table. You should write commands
+only at running processes. Writing commands at sleeping
+or preempted processes has no effect.
+
+
+\section{Debugging}
+\noindent
+
+The most difficult aspect of debugging has to do
+with the communication protocol between the various
+system and user processes: which process sent what
+messages to which other process when? Here the
+log files can be extremely helpful -- in fact,
+indispensible. You can cause any of the system
+processes to write a log file by calling
+{\tt startup} with options. The options accepted
+by {\tt startup} are
+\begin{verbatim}
+k h s f m i p
+\end{verbatim}
+For example the command
+\begin{verbatim}
+startup k f p
+\end{verbatim}
+will cause the kernel, FM and PM to write log files.
+The option {\tt h} is for {\tt devhd}, the option
+{\tt s} for {\tt devsw}, {\tt m} for MM and {\tt i}
+for IPCM. The log file for the kernel is called
+{\tt klog}, that of FM is called {\tt fmlog}, etc.
+
+
+By starting a user process with a command like
+\begin{verbatim}
+user 5 -d
+\end{verbatim}
+you can cause it to write a log file as well. Its
+log file will be called {\tt log5}.
+
+
+These log files are not human readable. To look at them
+we use the Tunix utility {\tt encore}. For example,
+to examine the log produced by FM enter the command
+\begin{verbatim}
+encore fmlog
+\end{verbatim}
+The utility {\tt encore} writes one line for each message
+recorded in the log giving the command, the recipient,
+the sender and the first three arguments. All of this
+is written to {\tt stdout}, so you are well advised
+to pipe the output from {\tt encore} into {\tt more}
+or else redirect it to a file, where you can inspect
+it in a more leisurely fashion using an editor.
+
+
+These log files tend to be very long, so you will need
+a little practice in finding the place where something
+went wrong. If you're lucky, it will be near the end
+of the file.
+
+
+\section{Closing remark}
+\noindent
+
+This is supposed to be software for people who want to
+learn about operating systems by experimenting. So if
+you run into any problems, prove that you're made of the
+right stuff by fixing them yourself! Don't bombard me
+with bug reports.
+
+
+\end{document} 
+

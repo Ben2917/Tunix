@@ -1,0 +1,221 @@
+Notes on Tunix
+==============
+
+This is not the technical documentation for the software Tunix.
+The documentation is to be found in the book
+
+R. M. Switzer, Operating Systems: A Practical Approach, Prentice Hall, 1993
+
+This paper is merely a set of notes on the installation and use of Tunix.
+
+Platform
+--------
+
+Tunix, as delivered, is executable on an Intel processor 80386 or 80486
+under Unix System V, Release 3 and upwards.
+
+The part that makes porting to other architectures non-trivial is the
+very short but somewhat tricky assembly module `context.s'. This module
+is responsible for manipulating the stack to make a context switch
+between threads possible. In order to port Tunix to other architectures
+you will need to rewrite this assembler module. That means, of course,
+that you will need to understand the stack conventions of your local
+C compiler and you will need to be conversant with writing assembler
+code on your machine.
+
+Under SunOS it is conceivable these manipulations in assembler could be
+avoided entirely by using the threads provided to programmers by the
+operating system. If you want to try something like this, take a look
+at the C module `thread.c', which implements the Tunix threads.
+
+Installing Tunix
+----------------
+
+You have presumably already unpacked the tar-file `tunix.tar' for
+otherwise you would not be reading this text. In the same directory
+in which you found this text you will find a subdirectory `os' and
+there you will find a shell script  called `build_os'. In principle
+all you have to do is enter the command
+
+    build_os
+
+The script will automatically build all the parts of Tunix and deposit
+the executable binaries in the subdirectory `os/result'. However, you
+would be well advised to watch for error messages that might occur while
+the script is working -- or perhaps, better still, redirect the output to
+a file to be inspected when the script is finished.
+
+Populating the file system
+--------------------------
+
+The shell script `build_os' created a file system for Tunix using the
+Tunix utility `mkfs' which can be found in the subdirectory `os/result'.
+This file system is empty. The first thing you will want to do is populate
+it with some directories and files. This is simultaneously a first exercise
+in using Tunix.
+
+Move to the subdirectory `os/result' and start the Tunix system by executing
+the shell script `startup'. The driver process `devtty' for terminals must
+be started separately. This is best done in a separate window (workstations)
+or on a separate virtual terminal (Unix System V) so as to keep the input
+and output of various Tunix processes from getting mixed. Switch to a
+different window and in the the subdirectory `os/result' enter the command
+
+devtty -m2
+
+
+Now all parts of the Tunix OS are running. When you switch back to the
+window in which the kernel was started, you should see the first few lines
+of the process table as reported by the process manager PM in verbose mode.
+You will see that only one process exists with PID 5. This is essentially
+the `init' process but it can be used for doing administrative work, as
+we will now see.
+
+Switch to a new window or virtual terminal and in the subdirectory
+`os/result' enter the command
+
+user 5
+
+This starts a `user process' which regards itself as having PID 5. It can
+now communicate with the kernel. You can use these `user processes' much as
+you would the shell, entering commands like `ls' and `cd ...'. In addition
+the user processes accept a number of commands ordinary shells don't
+understand as we will see. If you want to know which commands the user
+process understands, enter the command {\tt help} or else examine the code
+of `user.c' in the subdirectory `os/kernel/source'.
+
+When the prompt `>' of the user process appears you can enter the command
+`ls'. The answer will be `nothing', since your file system is still empty.
+Now enter the following commands to get things started.
+
+mkdir bin
+mkdir dev
+mkdir etc
+cd dev
+mknod fs    060600 0
+mknod fs1   060600 1
+mknod rroot 020600 0
+mknod tty   020622 512
+
+If you now enter the command `ls' you should get an answer that looks
+like this:
+
+brw-------  1   1   1    0,  0 Mar 3 93 10:09  fs
+brw-------  1   1   1    0,  1 Mar 3 93 10:10  fs1
+crw-------  1   1   1    0,  0 Mar 3 93 10:10  rroot
+crw--w--w-  1   1   1    2,  0 Mar 3 93 10:10  tty
+
+Now enter the command `sync' to be sure your changes are recorded
+permanently in the file system.
+
+In principle you could fill your file system with directories and files
+`by hand'. That is very tedious. A quicker way is to use the Tunix
+utility `tree'. This program accepts a Unix path as argument and makes
+an exact copy of the Unix subdirectory specified by this path in your
+Tunix root file system beneath the subdirectory `etc'. To do this the
+Tunix kernel should be running of course.
+
+Example
+-------
+Suppose you have a Unix directory `hooha' which contains several
+subdirectories and each of these contains several files. Start the
+system with `startup' and `devtty -m2'. Instead of starting the usual
+user process with `user' enter the command
+
+tree hooha
+
+When `tree' is finished, stop the kernel again with `shutdown'. Later with
+your `user process' you can change to the directory {\tt etc}. You will find
+that it now has a subdirectory `hooha' and that `hooha' has the same
+tree structure as the original Unix directory. If some of the files in
+this directory are ASCII files you can list their contents with the
+command `cat'.
+
+
+User processes
+--------------
+
+You can now test Tunix in `multiuser mode'. You start Tunix in the manner
+described above. Execute the shell script `startup' in one window and
+enter the command
+
+devtty -m2
+
+in a second window. In a third window enter the command
+
+user 5
+
+to start your `init' process. This one should run as long as the kernel
+is running. You may now generate further processes by entering the
+command `fork' after the prompt in any `user process'. If you then
+examine the process table printed by PM, you will see that a new process
+has been created and you will also see which PID it has been given. In a
+new window (to keep output from being mixed) enter the command
+
+user n
+
+where `n' is the PID of the newly created process.
+
+
+You can tell which process is currently running -- i.e. `has the CPU' --
+either by looking at the process table or by seeing which user process
+has its prompt visible. The running process has an `O' in the
+`status' column of the process table. You should write commands
+only at running processes. Writing commands at sleeping or preempted
+processes has no effect.
+
+
+Debugging
+---------
+
+The most difficult aspect of debugging has to do with the communication
+protocol between the various system and user processes: which process sent
+what messages to which other process when? Here the log files can be
+extremely helpful -- in fact, indispensible. You can cause any of the system
+processes to write a log file by calling `startup' with options. The options
+accepted by `startup' are
+
+k h s f m i p
+
+For example the command
+
+startup k f p
+
+will cause the kernel, FM and PM to write log files. The option `h' is for
+`devhd', the option `s' for `devsw', `m' for MM and `i' for IPCM. The log
+file for the kernel is called `klog', that of FM is called `fmlog', etc.
+
+By starting a user process with a command like
+
+user 5 -d
+
+you can cause it to write a log file as well. Its log file will be called 
+`log5'.
+
+
+These log files are not human readable. To look at them we use the Tunix
+utility `encore'. For example, to examine the log produced by FM enter the
+command
+
+encore fmlog
+
+The utility `encore' writes one line for each message recorded in the log
+giving the command, the recipient, the sender and the first three arguments.
+All of this is written to `stdout', so you are well advised to pipe the
+output from `encore' into `more' or else redirect it to a file, where you
+can inspect it in a more leisurely fashion using an editor.
+
+
+These log files tend to be very long, so you will need a little practice
+in finding the place where something went wrong. If you're lucky, it will
+be near the end of the file.
+
+Closing remark
+--------------
+
+This is supposed to be software for people who want to
+learn about operating systems by experimenting. So if
+you run into any problems, prove that you're made of the
+right stuff by fixing them yourself! Don't bombard me
+with bug reports.
+

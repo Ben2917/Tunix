@@ -1,0 +1,19 @@
+#zap all kernel processes
+
+zapu devclk
+sleep 2
+zapu pm
+sleep 2
+zapu ipcm
+sleep 2
+zapu mm
+sleep 2
+zapu fm
+sleep 2
+zapu devtty
+sleep 2
+zapu devsw
+sleep 2
+zapu devhd
+sleep 2
+zapu kernel
